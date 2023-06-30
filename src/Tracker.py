@@ -10,6 +10,8 @@ from datetime import datetime
 from PubService import PubService
 pubservice = PubService()
 
+from FPSCounter import FPSCounter
+fps_counter = FPSCounter()
 
 from WebcamInfo import WebcamInfo
 webcam = WebcamInfo()
@@ -18,6 +20,8 @@ webcam = WebcamInfo()
 logging.getLogger("ultralytics").setLevel(logging.WARNING)
 logging.getLogger("torch").setLevel(logging.WARNING)
 logging.getLogger("torchvision").setLevel(logging.WARNING)
+
+
 
 
 def send_message(xyxy,tracker_id):
@@ -78,7 +82,7 @@ def main():
     model = YOLO("yolov8l.pt")
     
     #work on each frame separatly
-    for result in model.track(source="0", show=False, stream=True):
+    for result in model.track(source="0", show=False, stream=True, device="mps"):
         try:
             frame = result.orig_img
             
@@ -100,6 +104,12 @@ def main():
             frame = box_annotator.annotate(scene=frame, detections=detections, labels=labels)
             
             cv2.imshow("yolov8",frame)
+
+            # Update the FPS counter
+            fps_counter.update()
+
+            # Print the current FPS
+            fps_counter.print_fps()
 
             #with esc you can escape and quit the app
             if(cv2.waitKey(30) == 27):

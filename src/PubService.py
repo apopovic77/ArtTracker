@@ -12,6 +12,7 @@ class PubService():
         #self.server_thread = threading.Thread(target=self.serve)
         self.port = 5556
         context = zmq.Context()
+        context.setsockopt(zmq.SNDBUF, 10 * 1024 * 1024)
         self.socket = context.socket(zmq.PUB)
         
     def send(self, topic ,msgobj):
