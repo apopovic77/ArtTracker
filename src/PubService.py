@@ -16,8 +16,8 @@ class PubService():
         self.socket = context.socket(zmq.PUB)
         
     def send(self, topic ,msgobj):
-        # Acquire the lock before accessing the shared queue
-        lock.acquire()
+        # # Acquire the lock before accessing the shared queue
+        # lock.acquire()
         try:
             self.socket.send_multipart([topic.encode(), msgobj.SerializeToString()])
         except Exception as e:
@@ -26,7 +26,7 @@ class PubService():
             print("===========================")
         finally:
             # Release the lock after accessing the queue
-            lock.release()
+            # lock.release()
         
 
     # def serve(self):
