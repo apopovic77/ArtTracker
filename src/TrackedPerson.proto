@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package SpreadYourWings;
+
+import "google/protobuf/timestamp.proto";
+
+message BoundingBox {
+  float x = 1;
+  float y = 2;
+  float width = 3;
+  float height = 4;
+}
+
+message TrackedPerson {
+  BoundingBox boundingbox = 1;
+  int32 id = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message Empty {}
+
+service TrackedPersonService {
+  rpc GetTracks (Empty) returns (stream TrackedPerson);
+}
