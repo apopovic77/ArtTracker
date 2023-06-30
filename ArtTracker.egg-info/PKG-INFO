@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: ArtTracker
+Version: 0.1.0
+Summary: Efficient person tracking using YOLOv8 and ZeroMQ (Zmq)
+Home-page: https://github.com/apopovic77/ArtTracker
+Author: Alexander Popovic
+Author-email: apopovic.aut@gmail.com
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
+ArtTracker is an efficient and easy-to-use software application designed to track and identify people using the YOLOv8 algorithm. It utilizes ZeroMQ (Zmq) for seamless communication between publishers and subscribers, ensuring reliable transmission of tracked person data.

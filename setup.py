@@ -26,3 +26,9 @@ setup(
     ],
     python_requires='>=3.10',
 )
+
+
+#THIS IS HOW YOU RUN IT
+#pip install setuptools twine
+#python setup.py sdist bdist_wheel
+#twine upload dist/*
