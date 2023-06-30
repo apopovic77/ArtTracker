@@ -28,9 +28,10 @@ from time import sleep
 import queue
 tracked_persons = queue.Queue()
 
+from Logger import Logger
+logger = Logger()
 
-
-
+from RabbitMessageBroker import RabbitMessageBroker
 
 # Set the desired logging level
 logging.getLogger("ultralytics").setLevel(logging.WARNING)
@@ -80,7 +81,8 @@ def send_message(xyxy,tracker_id):
 
 def do_send_with_zmq(tracked_person):
     print("PERSON "+str(tracked_person.id) + f" x: {tracked_person.boundingbox.x:.2f}, y: {tracked_person.boundingbox.y:.2f}, width: {tracked_person.boundingbox.width:.2f}, height: {tracked_person.boundingbox.height:.2f} ", end='')
-    pubservice.send("TrackedPerson",tracked_person)
+    #pubservice.send("TrackedPerson",tracked_person)
+    RabbitMessageBroker.send_to_shared_mem(tracked_person)
 
 def start_dispatcher():
     while(True):
@@ -144,7 +146,7 @@ def main():
                 
             frame = box_annotator.annotate(scene=frame, detections=detections, labels=labels)
             
-            cv2.imshow("yolov8",frame)
+            #cv2.imshow("yolov8",frame)
 
             # Update the FPS counter
             fps_counter.update()

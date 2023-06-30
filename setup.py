@@ -23,6 +23,7 @@ setup(
         'supervision',
         'pafy',
         'lapx',
+        'pika'
     ],
     python_requires='>=3.10',
 )
