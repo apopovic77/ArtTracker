@@ -30,7 +30,8 @@ Here's how you can use ArtTracker:
 
 ## Examples
 
-Include some code snippets or example commands showcasing the usage or integration of ArtTracker.
+just run it with python tracker.py
+it will then try to stream from source=0 which is your webcam
 
 ## Contributing
 
@@ -46,8 +47,11 @@ Provide any acknowledgments or credits to any libraries, resources, or individua
 
 ## Contact
 
-For any inquiries or feedback, please contact [Your Name](mailto:your.email@example.com).
+For any inquiries or feedback, please contact [Alexander Popovic](mailto:apopovic.aut@gmail.com).
 
 ## References
 
 List any references or related resources that users may find helpful.
+
+https://www.youtube.com/watch?v=Mi9iHFd0_Bo&t=646s&ab_channel=Roboflow
+
