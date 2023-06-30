@@ -35,7 +35,7 @@ class SubClient():
         self.socket = context.socket(zmq.SUB)
 
         # Connect to the server
-        self.socket.connect("tcp://localhost:%s" % self.port)
+        self.socket.connect("tcp://172.20.10.2:%s" % self.port)
 
         # Subscribe to all topics if no specific topics are given
         if not topics:
@@ -58,11 +58,11 @@ class SubClient():
                 tracked_person.ParseFromString(msg)
 
                 #use shared mem to share
-                SendToSharedMem(tracked_person)
+                #SendToSharedMem(tracked_person)
 
                 console_renderer.set_position(1-(tracked_person.boundingbox.x+tracked_person.boundingbox.width/2))
                 
-                #fps_counter.print_fps()
+                fps_counter.print_fps()
             except zmq.ZMQError as e:
                 logger.log_error("ZMQError: ", e)
             except Exception as e:
