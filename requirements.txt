@@ -1,3 +1,6 @@
+numpy
+opencv-python
+pyzmq
 ultralytics
 supervision
 pafy
