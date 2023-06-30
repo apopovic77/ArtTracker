@@ -1,0 +1,7 @@
+README.md
+setup.py
+ArtTracker.egg-info/PKG-INFO
+ArtTracker.egg-info/SOURCES.txt
+ArtTracker.egg-info/dependency_links.txt
+ArtTracker.egg-info/requires.txt
+ArtTracker.egg-info/top_level.txt
