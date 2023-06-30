@@ -2,6 +2,7 @@ import cv2
 from ultralytics import YOLO
 import supervision as sv
 import logging
+import threading
 
 from TrackedPerson_pb2 import TrackedPerson
 from google.protobuf.timestamp_pb2 import Timestamp
@@ -16,10 +17,26 @@ fps_counter = FPSCounter()
 from WebcamInfo import WebcamInfo
 webcam = WebcamInfo()
 
+import torch
+
+# import asyncio
+dispatcher_lock = threading.Lock()
+from time import sleep
+# from concurrent.futures import ProcessPoolExecutor
+
+# Create a new queue
+import queue
+tracked_persons = queue.Queue()
+
+
+
+
+
 # Set the desired logging level
 logging.getLogger("ultralytics").setLevel(logging.WARNING)
 logging.getLogger("torch").setLevel(logging.WARNING)
 logging.getLogger("torchvision").setLevel(logging.WARNING)
+
 
 
 
@@ -38,7 +55,6 @@ def send_message(xyxy,tracker_id):
             timestamp = Timestamp()
             timestamp.FromDatetime(current_time)
 
-
             tracked_person = TrackedPerson()
             tracked_person.boundingbox.x = x1/webcam.width
             tracked_person.boundingbox.y = y1/webcam.height
@@ -46,27 +62,48 @@ def send_message(xyxy,tracker_id):
             tracked_person.boundingbox.height = (y2-y1)/webcam.height
             tracked_person.id = tracker_id
             tracked_person.timestamp.CopyFrom(timestamp)
-            
-            print("PERSON "+str(tracker_id) + f" x: {tracked_person.boundingbox.x:.2f}, y: {tracked_person.boundingbox.y:.2f}, width: {tracked_person.boundingbox.width:.2f}, height: {tracked_person.boundingbox.height:.2f}")
 
-            pubservice.send("TrackedPerson",tracked_person)
+
+            dispatcher_lock.acquire()
+            tracked_persons.put(tracked_person)
+            dispatcher_lock.release()
+            
+            # if exe is not None:
+            #     exe.submit(do_send_with_zmq,tracked_person)
+            
         except Exception as e:
             # Exception handling code for other exceptions
             print("===========================")
             print("An error occurred:", str(e))
             print("===========================")
 
+
+def do_send_with_zmq(tracked_person):
+    print("PERSON "+str(tracked_person.id) + f" x: {tracked_person.boundingbox.x:.2f}, y: {tracked_person.boundingbox.y:.2f}, width: {tracked_person.boundingbox.width:.2f}, height: {tracked_person.boundingbox.height:.2f} ", end='')
+    pubservice.send("TrackedPerson",tracked_person)
+
+def start_dispatcher():
+    while(True):
+        dispatcher_lock.acquire()
+        if tracked_persons.qsize() > 0:
+            tp = tracked_persons.get()
+            do_send_with_zmq(tp)
+        dispatcher_lock.release()
+        sleep(60.0/1000)
+
 def main():
+
 
     if(webcam.IsWebcamAvailable == False):
         print("cannot run no camera connected")
         return
 
-
-
+    # Start the dispatcher in a parallel thread
+    dispatcher_thread = threading.Thread(target=start_dispatcher)
+    dispatcher_thread.start()
+   
     # Usage
     print(f"Webcam resolution: {webcam.width}x{webcam.height}")
-
 
     #start the publisher server
     pubservice.run_server()
@@ -81,8 +118,12 @@ def main():
     #the yolo model
     model = YOLO("yolov8l.pt")
     
+    device = "mps"
+    if torch.cuda.is_available():
+        device = 0
+    
     #work on each frame separatly
-    for result in model.track(source="0", show=False, stream=True, device="mps"):
+    for result in model.track(source="0", show=False, stream=True, device=device):
         try:
             frame = result.orig_img
             
