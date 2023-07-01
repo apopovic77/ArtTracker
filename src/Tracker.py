@@ -31,52 +31,40 @@ tracked_persons = queue.Queue()
 from Logger import Logger
 logger = Logger()
 
+from Server import TcpServer
+server = TcpServer()
+
 from RabbitMessageBroker import RabbitMessageBroker
 
 # Set the desired logging level
 logging.getLogger("ultralytics").setLevel(logging.WARNING)
 logging.getLogger("torch").setLevel(logging.WARNING)
 logging.getLogger("torchvision").setLevel(logging.WARNING)
+    
 
+def create_person(xyxy,tracker_id):
+    x1 = xyxy[0]
+    y1 = xyxy[1]
+    x2 = xyxy[2]
+    y2 = xyxy[3]
 
+    current_time = datetime.now()
+    timestamp = Timestamp()
+    timestamp.FromDatetime(current_time)
 
+    tracked_person = TrackedPerson()
+    tracked_person.boundingbox.x = x1/webcam.width
+    tracked_person.boundingbox.y = y1/webcam.height
+    tracked_person.boundingbox.width = (x2-x1)/webcam.width
+    tracked_person.boundingbox.height = (y2-y1)/webcam.height
+    tracked_person.id = tracker_id
+    tracked_person.timestamp.CopyFrom(timestamp)
+    return tracked_person
 
-
-def send_message(xyxy,tracker_id):
-        try:
-            x1 = xyxy[0]
-            y1 = xyxy[1]
-            x2 = xyxy[2]
-            y2 = xyxy[3]
-
-            #print("PERSON "+str(tracker_id) + f" x1: {x1:.2f}, y1: {y1:.2f}, x2: {x2:.2f}, y2: {y2:.2f}")
- 
-            # Get the current time
-            current_time = datetime.now()
-            timestamp = Timestamp()
-            timestamp.FromDatetime(current_time)
-
-            tracked_person = TrackedPerson()
-            tracked_person.boundingbox.x = x1/webcam.width
-            tracked_person.boundingbox.y = y1/webcam.height
-            tracked_person.boundingbox.width = (x2-x1)/webcam.width
-            tracked_person.boundingbox.height = (y2-y1)/webcam.height
-            tracked_person.id = tracker_id
-            tracked_person.timestamp.CopyFrom(timestamp)
-
-
-            dispatcher_lock.acquire()
-            tracked_persons.put(tracked_person)
-            dispatcher_lock.release()
-            
-            # if exe is not None:
-            #     exe.submit(do_send_with_zmq,tracked_person)
-            
-        except Exception as e:
-            # Exception handling code for other exceptions
-            print("===========================")
-            print("An error occurred:", str(e))
-            print("===========================")
+def send_message(person):
+    dispatcher_lock.acquire()
+    tracked_persons.put(person)
+    dispatcher_lock.release()
 
 
 def do_send_with_zmq(tracked_person):
@@ -95,14 +83,15 @@ def start_dispatcher():
 
 def main():
 
+    server.Run()
 
     if(webcam.IsWebcamAvailable == False):
         print("cannot run no camera connected")
         return
 
-    # Start the dispatcher in a parallel thread
-    dispatcher_thread = threading.Thread(target=start_dispatcher)
-    dispatcher_thread.start()
+    # # Start the dispatcher in a parallel thread
+    # dispatcher_thread = threading.Thread(target=start_dispatcher)
+    # dispatcher_thread.start()
    
     # Usage
     print(f"Webcam resolution: {webcam.width}x{webcam.height}")
@@ -134,6 +123,9 @@ def main():
             if result.boxes.id is not None:
                 detections.tracker_id = result.boxes.id.cpu().numpy().astype(int)
             labels = []
+
+
+            current_tracks = []  
             for i in range(len(detections)):
                 confidence = detections[i].confidence[0]
                 class_id = detections[i].class_id[0]
@@ -142,7 +134,12 @@ def main():
                 
                 if class_id == 0 and confidence > 0.7 and detections[i].tracker_id is not None: 
                     #send message via publish service zmq
-                    send_message(detections[i].xyxy[0],detections[i].tracker_id[0])
+                    person = create_person(detections[i].xyxy[0],detections[i].tracker_id[0])
+                    current_tracks.append(person)
+                    #send_message(person)
+            
+            if len(current_tracks) > 0:
+                server.add_persons(current_tracks)
                 
             frame = box_annotator.annotate(scene=frame, detections=detections, labels=labels)
             
