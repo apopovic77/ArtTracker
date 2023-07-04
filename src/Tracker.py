@@ -68,7 +68,7 @@ def send_message(person):
 
 
 def do_send_with_zmq(tracked_person):
-    print("PERSON "+str(tracked_person.id) + f" x: {tracked_person.boundingbox.x:.2f}, y: {tracked_person.boundingbox.y:.2f}, width: {tracked_person.boundingbox.width:.2f}, height: {tracked_person.boundingbox.height:.2f} ", end='')
+    #print("PERSON "+str(tracked_person.id) + f" x: {tracked_person.boundingbox.x:.2f}, y: {tracked_person.boundingbox.y:.2f}, width: {tracked_person.boundingbox.width:.2f}, height: {tracked_person.boundingbox.height:.2f} ", end='')
     pubservice.send("TrackedPerson",tracked_person)
     #RabbitMessageBroker.send_to_shared_mem(tracked_person)
 
@@ -83,18 +83,20 @@ def start_dispatcher():
 
 def main():
 
-    server.Run()
+    
 
     if(webcam.IsWebcamAvailable == False):
         print("cannot run no camera connected")
         return
 
     # # Start the dispatcher in a parallel thread
-    # dispatcher_thread = threading.Thread(target=start_dispatcher)
-    # dispatcher_thread.start()
+    dispatcher_thread = threading.Thread(target=start_dispatcher)
+    dispatcher_thread.start()
    
     # Usage
     print(f"Webcam resolution: {webcam.width}x{webcam.height}")
+
+    server.Run()
 
     #start the publisher server
     pubservice.run_server()
@@ -136,7 +138,7 @@ def main():
                     #send message via publish service zmq
                     person = create_person(detections[i].xyxy[0],detections[i].tracker_id[0])
                     current_tracks.append(person)
-                    #send_message(person)
+                    send_message(person)
             
             if len(current_tracks) > 0:
                 server.add_persons(current_tracks)

@@ -39,7 +39,7 @@ class TcpServer:
         self.current_tracks = []
         self.sender_thread = None
         self.server_thread = None
-        self.HOST, self.PORT = '172.20.10.2', 5554
+        self.HOST, self.PORT = '172.20.10.4', 5554
 
     def LOCK(self):
         #print("LOCK")
@@ -93,6 +93,7 @@ class TcpServer:
                         dest.sendall(data)
                     except (BrokenPipeError, ConnectionResetError):
                         self.LOCK()
+                        print("CLIENT DISCONNECTED")
                         requests.remove(dest)
                         self.UNLOCK()
 
