@@ -6,3 +6,6 @@ supervision
 pafy
 lapx
 pika
+hmmlearn
+mido
+python-rtmidi

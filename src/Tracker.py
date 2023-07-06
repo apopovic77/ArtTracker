@@ -1,12 +1,17 @@
 import cv2
 from ultralytics import YOLO
 import supervision as sv
+from supervision.geometry.core import Point
 import logging
 import threading
+import numpy as np
 
 from TrackedPerson_pb2 import TrackedPerson
 from google.protobuf.timestamp_pb2 import Timestamp
 from datetime import datetime
+
+from MidiController import MidiController
+midi = MidiController.getInstance()
 
 from PubService import PubService
 pubservice = PubService()
@@ -36,11 +41,59 @@ server = TcpServer()
 
 from RabbitMessageBroker import RabbitMessageBroker
 
+from PersonLocation import PersonLocation, Area, Event
+IMAGE_WIDTH = 1920
+IMAGE_HEIGHT = 1080
+AREAS_COUNT = 40
+AREA_WIDTH = 1/AREAS_COUNT
+Area.SetArea(AREAS_COUNT)
+person_locations = {}
+
+
+from HMM import RealTimeHMM
+hmm = RealTimeHMM()
+debug_states = np.zeros((200, IMAGE_WIDTH, 3), dtype=np.uint8)
+from HMMRadial import RadialHMM
+hmmr = RadialHMM(n_areas=6, start_angle=np.pi/10)
+hmmr.print_transition_matrix()
+hmmr.draw_areas(500, np.pi/10, -np.pi/10)
+
+
+
 # Set the desired logging level
 logging.getLogger("ultralytics").setLevel(logging.WARNING)
 logging.getLogger("torch").setLevel(logging.WARNING)
 logging.getLogger("torchvision").setLevel(logging.WARNING)
     
+def draw_prediction_rectangle(frame, state, rectangle_height=100, color=(0, 255, 0), thickness=2):
+    # Determine the width and height of the rectangle based on the image size and area proportions
+    image_width = frame.shape[1]
+    rectangle_width = int(image_width * AREA_WIDTH)
+
+    if(state is None):
+        return
+
+    # Determine the x-coordinate for the top-left corner of the rectangle based on the state
+    x = int((state - 1) * image_width * AREA_WIDTH) if state > 0 else 0
+
+    # Determine the y-coordinate for the top-left corner of the rectangle
+    y = 100  # Update with your desired y-coordinate
+
+    # Draw the rectangle on the image
+    cv2.rectangle(frame, (x, y), (x + rectangle_width, y + rectangle_height), color, thickness=thickness)
+
+    return frame
+
+def draw_text(frame, text, state, font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=1.0, color=(0, 255, 0), thickness=2):
+    image_width = frame.shape[1]
+    x = int((state - 1) * image_width * AREA_WIDTH) if state > 0 else 0
+    y = 100  # Update with your desired y-coordinate
+    text_size, _ = cv2.getTextSize(text, font, font_scale, thickness)
+    text_x = x - text_size[0] // 2
+    text_y = y + text_size[1] // 2
+    cv2.putText(frame, text, (text_x, text_y), font, font_scale, color, thickness)
+
+
 
 def create_person(xyxy,tracker_id):
     x1 = xyxy[0]
@@ -81,22 +134,30 @@ def start_dispatcher():
         dispatcher_lock.release()
         sleep(60.0/1000)
 
+def on_location_changed(sender, new_location):
+    person_location = sender
+    if(person_location not in person_locations):
+        person_location.LocationChanged -= on_location_changed
+
+
+
+    # Event handler code
+    print(f"Location changed: person id {person_location.observations[-1].id} {new_location}")
+
 def main():
 
-    
+    #server.Run()
 
     if(webcam.IsWebcamAvailable == False):
         print("cannot run no camera connected")
         return
 
-    # # Start the dispatcher in a parallel thread
+    # Start the dispatcher in a parallel thread
     dispatcher_thread = threading.Thread(target=start_dispatcher)
     dispatcher_thread.start()
    
     # Usage
     print(f"Webcam resolution: {webcam.width}x{webcam.height}")
-
-    server.Run()
 
     #start the publisher server
     pubservice.run_server()
@@ -116,7 +177,7 @@ def main():
         device = 0
     
     #work on each frame separatly
-    for result in model.track(source="0", show=False, stream=True, device=device):
+    for result in model.track(source="0", show=True, stream=True, device=device):
         try:
             frame = result.orig_img
             
@@ -128,7 +189,8 @@ def main():
 
 
             current_tracks = []  
-            for i in range(len(detections)):
+            count_detections = len(detections)
+            for i in range(count_detections):
                 confidence = detections[i].confidence[0]
                 class_id = detections[i].class_id[0]
                 label = "#"+str(detections[i].tracker_id)+model.model.names[class_id] + " " + f"{confidence:.2f}"
@@ -137,21 +199,76 @@ def main():
                 if class_id == 0 and confidence > 0.7 and detections[i].tracker_id is not None: 
                     #send message via publish service zmq
                     person = create_person(detections[i].xyxy[0],detections[i].tracker_id[0])
+                    person_loc = None
+                    if person.id not in person_locations:
+                        person_loc = PersonLocation(person.id)
+                        person_locations[person.id] = person_loc
+                        # Subscribe to the LocationChanged event
+                        person_loc.LocationChanged += on_location_changed
+                    else:
+                        person_loc = person_locations[person.id]
+
+                    location_changed = person_loc.update(person)
+                    if(location_changed == True):
+                        print("PERSON "+str(person.id)+" in Area "+Area.StateNames[person_loc.last_location])
                     current_tracks.append(person)
                     send_message(person)
+
+                    
+
+
+
+
+                    #hmm.update((person.boundingbox.x + person.boundingbox.width/2))
+                    #hmmr.update(person.boundingbox.x + person.boundingbox.width/2, person.boundingbox.y + person.boundingbox.height/2)
+                    #print(person.boundingbox.x + person.boundingbox.width/2) 
+
+                    
+                    #if len(hmm.observations) == 500:
+                        # hmm.train()
+                        # hmm.print_transition_matrix()
             
             if len(current_tracks) > 0:
                 server.add_persons(current_tracks)
                 
-            frame = box_annotator.annotate(scene=frame, detections=detections, labels=labels)
             
+
+            # check for people that left
+            debug_states = np.zeros((200, IMAGE_WIDTH, 3), dtype=np.uint8)
+            person_locations_copy = list(person_locations.values())
+            for index, person_location in enumerate(person_locations_copy):
+                person = person_location.observations[-1]
+                person_id = person.id
+                if(person_location.HasLeft()==True):
+                    del person_locations[person_id]
+                    print("PERSON "+str(person.id) + "HAS LEFT")
+                else:
+                    bb = person.boundingbox
+                    point = Point(x=int((bb.x + bb.width/2)*IMAGE_WIDTH),y=int((bb.y+bb.height/2)*IMAGE_HEIGHT))
+                    in_area = person_location.IsInArea()
+                    text = Area.StateNames[in_area]
+                    sv.draw_text(scene=frame, text_anchor=point, text=text)
+                    draw_prediction_rectangle(frame=debug_states, state=in_area,color=person_location.color, rectangle_height=50)   
+                    draw_text(frame=debug_states, state=in_area, text="PersonId "+str(person_id),color=person_location.color)
+                    cv2.imshow("Empty Image", debug_states)
+                    
+
+            frame = box_annotator.annotate(scene=frame, detections=detections, labels=labels)
+
+
+
+
+            
+            
+
+
             #cv2.imshow("yolov8",frame)
 
             # Update the FPS counter
             fps_counter.update()
 
             # Print the current FPS
-            fps_counter.print_fps()
+            #fps_counter.print_fps()
 
             #with esc you can escape and quit the app
             if(cv2.waitKey(30) == 27):
@@ -165,8 +282,8 @@ def main():
 
 
 
-    # model = YOLO('yolov8n.pt')  # load an official detection model
-    # results = model.track(source="https://youtu.be/Zgi9g1ksQHc", show=True)     
+
+  
 
 if __name__ == "__main__":
     main()
