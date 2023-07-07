@@ -9,3 +9,5 @@ pika
 hmmlearn
 mido
 python-rtmidi
+protobuf
+pynput

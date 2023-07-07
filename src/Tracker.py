@@ -12,6 +12,7 @@ from datetime import datetime
 
 from MidiController import MidiController
 midi = MidiController.getInstance()
+midi.start_keyboard_listener()
 
 from PubService import PubService
 pubservice = PubService()
@@ -44,7 +45,7 @@ from RabbitMessageBroker import RabbitMessageBroker
 from PersonLocation import PersonLocation, Area, Event
 IMAGE_WIDTH = 1920
 IMAGE_HEIGHT = 1080
-AREAS_COUNT = 40
+AREAS_COUNT = 5
 AREA_WIDTH = 1/AREAS_COUNT
 Area.SetArea(AREAS_COUNT)
 person_locations = {}
@@ -113,6 +114,7 @@ def create_person(xyxy,tracker_id):
     tracked_person.id = tracker_id
     tracked_person.timestamp.CopyFrom(timestamp)
     return tracked_person
+
 
 def send_message(person):
     dispatcher_lock.acquire()
