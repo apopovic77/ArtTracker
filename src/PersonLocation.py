@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import random
-from MidiController import MidiController
+from Midi.MidiController import MidiController
 
 
 class Event:

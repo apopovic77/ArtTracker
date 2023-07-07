@@ -6,21 +6,21 @@ import logging
 import threading
 import numpy as np
 
-from TrackedPerson_pb2 import TrackedPerson
+from protobuf.TrackedPerson_pb2 import TrackedPerson
 from google.protobuf.timestamp_pb2 import Timestamp
 from datetime import datetime
 
-from MidiController import MidiController
+from Midi.MidiController import MidiController
 midi = MidiController.getInstance()
 midi.start_keyboard_listener()
 
-from PubService import PubService
+from Zmq.PubService import PubService
 pubservice = PubService()
 
-from FPSCounter import FPSCounter
+from Utility.FPSCounter import FPSCounter
 fps_counter = FPSCounter()
 
-from WebcamInfo import WebcamInfo
+from Utility.WebcamInfo import WebcamInfo
 webcam = WebcamInfo()
 
 import torch
@@ -34,13 +34,13 @@ from time import sleep
 import queue
 tracked_persons = queue.Queue()
 
-from Logger import Logger
+from Utility.Logger import Logger
 logger = Logger()
 
-from Server import TcpServer
+from Tcp.Server import TcpServer
 server = TcpServer()
 
-from RabbitMessageBroker import RabbitMessageBroker
+from Rabbit.RabbitMessageBroker import RabbitMessageBroker
 
 from PersonLocation import PersonLocation, Area, Event
 IMAGE_WIDTH = 1920
@@ -51,10 +51,10 @@ Area.SetArea(AREAS_COUNT)
 person_locations = {}
 
 
-from HMM import RealTimeHMM
+from Hmm.HMM import RealTimeHMM
 hmm = RealTimeHMM()
 debug_states = np.zeros((200, IMAGE_WIDTH, 3), dtype=np.uint8)
-from HMMRadial import RadialHMM
+from Hmm.HMMRadial import RadialHMM
 hmmr = RadialHMM(n_areas=6, start_angle=np.pi/10)
 hmmr.print_transition_matrix()
 hmmr.draw_areas(500, np.pi/10, -np.pi/10)

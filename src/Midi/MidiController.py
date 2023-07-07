@@ -24,37 +24,25 @@ class MidiController:
             self.last_note = None
             self.playing_note={}
             self.playing_note_from={}
-            #self.notes = {i: 48 + i for i in range(50)}
-            self.notes = {
-                            0: 23,  # B0
-                            1: 24,  # C1
-                            2: 25,  # C#1 / Db1
-                            3: 26,  # D1
-                            4: 27,  # D#1 / Eb1
-                            5: 28,  # E1
-                            6: 29,  # F1
-                            7: 30,  # F#1 / Gb1
-                            8: 31,  # G1
-                            9: 32,  # G#1 / Ab1
-                            10: 33,  # A1
-                            11: 34,  # A#1 / Bb1
-                            12: 35,  # B1
-                            13: 36,  # C2
-                            # ...and so on
-                        }
+            self.notes = {i: 48 + i for i in range(50)}
             # self.notes = {
-                        #     0: 60,  # C4
-                        #     1: 62,  # D4
-                        #     2: 64,  # E4
-                        #     3: 66,  # F#4 / Gb4
-                        #     4: 68,  # G#4 / Ab4
-                        #     5: 70,  # A#4 / Bb4
-                        #     6: 72,  # C5
-                        #     7: 74,  # D5
-                        #     8: 76,  # E5
-                        #     9: 78,  # F#5 / Gb5
-                        #     10: 80  # G#5 / Ab5
-                        # }
+            #                 0: 23,  # B0
+            #                 1: 24,  # C1
+            #                 2: 25,  # C#1 / Db1
+            #                 3: 26,  # D1
+            #                 4: 27,  # D#1 / Eb1
+            #                 5: 28,  # E1
+            #                 6: 29,  # F1
+            #                 7: 30,  # F#1 / Gb1
+            #                 8: 31,  # G1
+            #                 9: 32,  # G#1 / Ab1
+            #                 10: 33,  # A1
+            #                 11: 34,  # A#1 / Bb1
+            #                 12: 35,  # B1
+            #                 13: 36,  # C2
+            #                 # ...and so on
+            #             }
+            
 
     def amplitude_to_velocity(self, amplitude):
         """Map an amplitude value between 0.01 and 1 to a MIDI velocity value between 0 and 127."""

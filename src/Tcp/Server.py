@@ -3,7 +3,7 @@ import threading
 import struct
 import time
 from google.protobuf.timestamp_pb2 import Timestamp
-from TrackedPerson_pb2 import TrackedPerson
+from protobuf.TrackedPerson_pb2 import TrackedPerson
 from queue import Queue
 
 requests = []

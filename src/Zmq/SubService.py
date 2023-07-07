@@ -11,19 +11,19 @@
 
 
 import zmq
-from TrackedPerson_pb2 import TrackedPerson,BoundingBox
+from protobuf.TrackedPerson_pb2 import TrackedPerson,BoundingBox
 
 
-from FPSCounter import FPSCounter
+from Utility.FPSCounter import FPSCounter
 fps_counter = FPSCounter()
 
-from Logger import Logger
+from Utility.Logger import Logger
 logger = Logger()
 logger.set_log_file("test.txt")
 logger.disable_console_logging()
 logger.disable_file_logging()
 
-from ConsoleRenderer import ConsoleRenderer
+from TestTrackerClient import ConsoleRenderer
 console_renderer = ConsoleRenderer()
 
 
