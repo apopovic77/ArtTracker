@@ -184,7 +184,7 @@ def main():
             frame = result.orig_img
             
             #annotate the image        
-            detections = sv.Detections.from_yolov8(result)
+            detections = sv.Detections.from_ultralytics(result)
             if result.boxes.id is not None:
                 detections.tracker_id = result.boxes.id.cpu().numpy().astype(int)
             labels = []
