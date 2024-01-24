@@ -1,3 +1,5 @@
+
+import config
 import cv2
 from ultralytics import YOLO
 import supervision as sv
@@ -43,17 +45,14 @@ server = TcpServer()
 from Rabbit.RabbitMessageBroker import RabbitMessageBroker
 
 from PersonLocation import PersonLocation, Area, Event
-IMAGE_WIDTH = 1920
-IMAGE_HEIGHT = 1080
-AREAS_COUNT = 5
-AREA_WIDTH = 1/AREAS_COUNT
-Area.SetArea(AREAS_COUNT)
+AREA_WIDTH = 1/config.AREAS_COUNT
+Area.SetArea(config.AREAS_COUNT)
 person_locations = {}
 
 
 from Hmm.HMM import RealTimeHMM
 hmm = RealTimeHMM()
-debug_states = np.zeros((200, IMAGE_WIDTH, 3), dtype=np.uint8)
+debug_states = np.zeros((200, config.IMAGE_WIDTH, 3), dtype=np.uint8)
 from Hmm.HMMRadial import RadialHMM
 hmmr = RadialHMM(n_areas=6, start_angle=np.pi/10)
 hmmr.print_transition_matrix()
@@ -177,9 +176,11 @@ def main():
     device = "mps"
     if torch.cuda.is_available():
         device = 0
+
+
     
     #work on each frame separatly
-    for result in model.track(source="0", show=True, stream=True, device=device):
+    for result in model.track(source=str(config.WEBCAM_IDX), show=config.SHOWCV, stream=True, device=device):
         try:
             frame = result.orig_img
             
@@ -188,7 +189,7 @@ def main():
             if result.boxes.id is not None:
                 detections.tracker_id = result.boxes.id.cpu().numpy().astype(int)
             labels = []
-
+            detections_for_labels = []
 
             current_tracks = []  
             count_detections = len(detections)
@@ -196,12 +197,13 @@ def main():
                 confidence = detections[i].confidence[0]
                 class_id = detections[i].class_id[0]
                 label = "#"+str(detections[i].tracker_id)+model.model.names[class_id] + " " + f"{confidence:.2f}"
-                labels.append(label)
                 
-                if class_id == 0 and confidence > 0.7 and detections[i].tracker_id is not None: 
+                if class_id == 0 and confidence > config.CONFIDENCE_DETECTION_MIN and detections[i].tracker_id is not None: 
                     #send message via publish service zmq
                     person = create_person(detections[i].xyxy[0],detections[i].tracker_id[0])
                     person_loc = None
+                    labels.append(label)
+                    detections_for_labels.append(detections[i])
                     if person.id not in person_locations:
                         person_loc = PersonLocation(person.id)
                         person_locations[person.id] = person_loc
@@ -233,10 +235,13 @@ def main():
             if len(current_tracks) > 0:
                 server.add_persons(current_tracks)
                 
-            
+            # Update the FPS counter
+            fps_counter.update()
+            # Print the current FPS
+            #fps_counter.print_fps()
 
             # check for people that left
-            debug_states = np.zeros((200, IMAGE_WIDTH, 3), dtype=np.uint8)
+            debug_states = np.zeros((200, config.IMAGE_WIDTH, 3), dtype=np.uint8)
             person_locations_copy = list(person_locations.values())
             for index, person_location in enumerate(person_locations_copy):
                 person = person_location.observations[-1]
@@ -246,16 +251,17 @@ def main():
                     print("PERSON "+str(person.id) + "HAS LEFT")
                 else:
                     bb = person.boundingbox
-                    point = Point(x=int((bb.x + bb.width/2)*IMAGE_WIDTH),y=int((bb.y+bb.height/2)*IMAGE_HEIGHT))
+                    point = Point(x=int((bb.x + bb.width/2)*config.IMAGE_WIDTH),y=int((bb.y+bb.height/2)*config.IMAGE_HEIGHT))
                     in_area = person_location.IsInArea()
                     text = Area.StateNames[in_area]
                     sv.draw_text(scene=frame, text_anchor=point, text=text)
                     draw_prediction_rectangle(frame=debug_states, state=in_area,color=person_location.color, rectangle_height=50)   
                     draw_text(frame=debug_states, state=in_area, text="PersonId "+str(person_id),color=person_location.color)
-                    cv2.imshow("Empty Image", debug_states)
                     
-
-            frame = box_annotator.annotate(scene=frame, detections=detections, labels=labels)
+                
+            draw_text(frame=debug_states, state=1, text=fps_counter.get_fps_string())
+            cv2.imshow("Empty Image", debug_states)          
+            #frame = box_annotator.annotate(scene=frame, detections=detections_for_labels, labels=labels)
 
 
 
@@ -266,11 +272,7 @@ def main():
 
             #cv2.imshow("yolov8",frame)
 
-            # Update the FPS counter
-            fps_counter.update()
 
-            # Print the current FPS
-            #fps_counter.print_fps()
 
             #with esc you can escape and quit the app
             if(cv2.waitKey(30) == 27):

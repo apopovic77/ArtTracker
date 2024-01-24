@@ -1,4 +1,5 @@
 import cv2
+import config;
 
 class WebcamInfo:
     """
@@ -23,10 +24,10 @@ class WebcamInfo:
         self._height = 1080
         self._is_webcam_available = None
         self._num_webcams_available = None
-        #self._initialize_webcam()
+        self._initialize_webcam()
 
     def _initialize_webcam(self):
-        cap = cv2.VideoCapture(1)
+        cap = cv2.VideoCapture(config.WEBCAM_IDX)
         self._is_webcam_available = cap.isOpened()
         if self._is_webcam_available:
             ret, frame = cap.read()
