@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 
 # Recursive function to draw the Sierpinski triangle fractal
@@ -9,7 +10,8 @@ def draw_fractal(ax, vertices, level):
     
     # Draw the triangle (only if level is 0)
     if level == 0:
-        ax.fill(points[:,0], points[:,1], 'k')
+        triangle = patches.Polygon(points, fill=False, linewidth=2.0, edgecolor='k') # Set linewidth to desired thickness
+        ax.add_patch(triangle)
     else:
         # Compute the midpoints of each side of the triangle
         s = np.sum(points, axis=0) / 3.0

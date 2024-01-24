@@ -19,14 +19,14 @@ class WebcamInfo:
         return cls._instance
 
     def __init__(self):
-        self._width = None
-        self._height = None
+        self._width = 1920
+        self._height = 1080
         self._is_webcam_available = None
         self._num_webcams_available = None
-        self._initialize_webcam()
+        #self._initialize_webcam()
 
     def _initialize_webcam(self):
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
         self._is_webcam_available = cap.isOpened()
         if self._is_webcam_available:
             ret, frame = cap.read()
