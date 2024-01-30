@@ -42,6 +42,10 @@ logger = Logger()
 from Tcp.Server import TcpServer
 server = TcpServer()
 
+from SharedMemoryManager import SharedMemoryManager
+shm_manager = SharedMemoryManager(max_players=10)
+
+
 from Rabbit.RabbitMessageBroker import RabbitMessageBroker
 
 from PersonLocation import PersonLocation, Area, Event
@@ -201,6 +205,10 @@ def main():
                 if class_id == 0 and confidence > config.CONFIDENCE_DETECTION_MIN and detections[i].tracker_id is not None: 
                     #send message via publish service zmq
                     person = create_person(detections[i].xyxy[0],detections[i].tracker_id[0])
+                    
+                    person_centerx = person.boundingbox.x + person.boundingbox.width/2
+                    person_centery = person.boundingbox.y + person.boundingbox.height/2
+
                     person_loc = None
                     labels.append(label)
                     detections_for_labels.append(detections[i])
@@ -217,7 +225,7 @@ def main():
                         print("PERSON "+str(person.id)+" in Area "+Area.StateNames[person_loc.last_location])
                     current_tracks.append(person)
                     send_message(person)
-
+                    shm_manager.update_player(person.id, person_centerx, person_centery)
                     
 
 
@@ -267,7 +275,7 @@ def main():
 
 
             
-            
+            shm_manager.write_to_shared_memory()
 
 
             #cv2.imshow("yolov8",frame)
