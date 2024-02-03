@@ -7,6 +7,17 @@ from supervision.geometry.core import Point
 import logging
 import threading
 import numpy as np
+from CaptureWebCamImage import WarpTransform
+src = np.array([[299., 227.],
+                [633., 212.],
+                [880., 526.],
+                [ 45., 529.]], dtype=np.float32)
+dst = np.array([[191., 107.],
+                [766., 104.],
+                [767., 526.],
+                [192., 523.]], dtype=np.float32)
+warptransform = WarpTransform(src,dst)
+WithWarpTransform = True
 
 from protobuf.TrackedPerson_pb2 import TrackedPerson
 from google.protobuf.timestamp_pb2 import Timestamp
@@ -61,6 +72,8 @@ from Hmm.HMMRadial import RadialHMM
 hmmr = RadialHMM(n_areas=6, start_angle=np.pi/10)
 hmmr.print_transition_matrix()
 hmmr.draw_areas(500, np.pi/10, -np.pi/10)
+
+
 
 
 
@@ -157,15 +170,17 @@ def main():
         print("cannot run no camera connected")
         return
 
-    # Start the dispatcher in a parallel thread
-    dispatcher_thread = threading.Thread(target=start_dispatcher)
-    dispatcher_thread.start()
+    # # Start the dispatcher in a parallel thread
+    # dispatcher_thread = threading.Thread(target=start_dispatcher)
+    # dispatcher_thread.start()
    
+    # #start the publisher server
+    # pubservice.run_server()
+
+
     # Usage
     print(f"Webcam resolution: {webcam.width}x{webcam.height}")
 
-    #start the publisher server
-    pubservice.run_server()
 
     #this is needed for the labeling the images
     box_annotator = sv.BoxAnnotator(
@@ -182,9 +197,23 @@ def main():
         device = 0
 
 
-    
-    #work on each frame separatly
-    for result in model.track(source=str(config.WEBCAM_IDX), show=config.SHOWCV, stream=True, device=device):
+    imgsz = 320  # Reduce input image size for faster processing
+    classes = [0]  # Filter detections to class 0 (persons)
+    conf = 0.3  # Adjust confidence threshold for detection stability
+    iou = 0.5  # Adjust IoU threshold for NMS
+
+        #work on each frame separatly
+    for result in model.track(
+        source=str(config.WEBCAM_IDX), 
+        show=config.SHOWCV, 
+        stream=True, 
+        device=device
+        , 
+        imgsz=imgsz, 
+        classes=classes,
+        conf=conf,
+        iou=iou
+        ):
         try:
             frame = result.orig_img
             
@@ -225,7 +254,15 @@ def main():
                         print("PERSON "+str(person.id)+" in Area "+Area.StateNames[person_loc.last_location])
                     current_tracks.append(person)
                     send_message(person)
-                    shm_manager.update_player(person.id, person_centerx, person_centery)
+
+
+                    #transform according to warp transform
+                    if (warptransform.has_warp() and WithWarpTransform):
+                        print ("CENTER " + str(person_centerx*config.IMAGE_WIDTH) + " " + str(person_centery*config.IMAGE_HEIGHT))
+                        (person_centerx,person_centery) = warptransform.transform_point((person_centerx*config.IMAGE_WIDTH, person_centery*config.IMAGE_HEIGHT))
+                        print ("CENTER " + str(person_centerx)+ " "+ str(person_centery))
+                        print ("**********")
+                    shm_manager.update_player(person.id, person_centerx / config.IMAGE_WIDTH, person_centery / config.IMAGE_HEIGHT)
                     
 
 
@@ -294,8 +331,6 @@ def main():
 
 
 
-
-  
 
 if __name__ == "__main__":
     main()
