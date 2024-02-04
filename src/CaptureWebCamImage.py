@@ -80,12 +80,12 @@ class WebCamImage:
         self.scale_slider.set(100)  # Default scale is 50%
         self.scale_slider.pack()
 
-        save_button = tk.Button(self.root, text="Save", command=self.save_image)
-        save_button.pack()
 
         self.panel = tk.Label(self.root)
         self.panel.pack()
 
+        save_button = tk.Button(self.root, text="Save", command=self.save_image)
+        save_button.pack()
 
 
         self.fetch_and_update_image()

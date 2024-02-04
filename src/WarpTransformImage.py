@@ -254,11 +254,11 @@ def main_workflow(img_path):
         return
 
 
-    #uncommet this if you want to capter an image from the webcam
-    path_to_save_dir = "/Users/apopovic/Downloads"
-    wcamimage = WebCamImage(path_to_save_dir)
-    path_to_final_image = wcamimage.Start()
-    print(f"Final saved image path: {path_to_final_image}")
+    # #uncommet this if you want to capter an image from the webcam
+    # path_to_save_dir = "/Users/apopovic/Downloads"
+    # wcamimage = WebCamImage(path_to_save_dir)
+    # path_to_final_image = wcamimage.Start()
+    # print(f"Final saved image path: {path_to_final_image}")
 
 
     # Select source points on the original image

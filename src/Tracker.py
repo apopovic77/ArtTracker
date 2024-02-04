@@ -8,14 +8,14 @@ import logging
 import threading
 import numpy as np
 from CaptureWebCamImage import WarpTransform
-src = np.array([[299., 227.],
-                [633., 212.],
-                [880., 526.],
-                [ 45., 529.]], dtype=np.float32)
-dst = np.array([[191., 107.],
-                [766., 104.],
-                [767., 526.],
-                [192., 523.]], dtype=np.float32)
+src = np.array([[ 604.,  205.],
+                [1089.,  214.],
+                [1514.,  909.],
+                [  12.,  909.]], dtype=np.float32)
+dst = np.array([[ 163.,   89.],
+                [1465.,   88.],
+                [1468.,  826.],
+                [ 160.,  825.]], dtype=np.float32)
 warptransform = WarpTransform(src,dst)
 WithWarpTransform = True
 
@@ -55,7 +55,6 @@ server = TcpServer()
 
 from SharedMemoryManager import SharedMemoryManager
 shm_manager = SharedMemoryManager(max_players=10)
-
 
 from Rabbit.RabbitMessageBroker import RabbitMessageBroker
 
@@ -234,7 +233,7 @@ def main():
                 if class_id == 0 and confidence > config.CONFIDENCE_DETECTION_MIN and detections[i].tracker_id is not None: 
                     #send message via publish service zmq
                     person = create_person(detections[i].xyxy[0],detections[i].tracker_id[0])
-                    
+
                     person_centerx = person.boundingbox.x + person.boundingbox.width/2
                     person_centery = person.boundingbox.y + person.boundingbox.height/2
 
@@ -258,11 +257,11 @@ def main():
 
                     #transform according to warp transform
                     if (warptransform.has_warp() and WithWarpTransform):
-                        print ("CENTER " + str(person_centerx*config.IMAGE_WIDTH) + " " + str(person_centery*config.IMAGE_HEIGHT))
+                        print ("PERSON "+str(person.id)+" "+str(person_loc.UniquePersonId) + " CENTER " + str(person_centerx*config.IMAGE_WIDTH) + " " + str(person_centery*config.IMAGE_HEIGHT))
                         (person_centerx,person_centery) = warptransform.transform_point((person_centerx*config.IMAGE_WIDTH, person_centery*config.IMAGE_HEIGHT))
-                        print ("CENTER " + str(person_centerx)+ " "+ str(person_centery))
+                        print ("PERSON "+str(person.id)+" "+str(person_loc.UniquePersonId)+ " CENTER " + str(person_centerx)+ " "+ str(person_centery))
                         print ("**********")
-                    shm_manager.update_player(person.id, person_centerx / config.IMAGE_WIDTH, person_centery / config.IMAGE_HEIGHT)
+                    shm_manager.update_player(person.id, person_loc.UniquePersonId, person_centerx / config.IMAGE_WIDTH, person_centery / config.IMAGE_HEIGHT)
                     
 
 
@@ -279,6 +278,8 @@ def main():
             
             if len(current_tracks) > 0:
                 server.add_persons(current_tracks)
+
+            shm_manager.write_to_shared_memory()
                 
             # Update the FPS counter
             fps_counter.update()
@@ -312,7 +313,7 @@ def main():
 
 
             
-            shm_manager.write_to_shared_memory()
+
 
 
             #cv2.imshow("yolov8",frame)

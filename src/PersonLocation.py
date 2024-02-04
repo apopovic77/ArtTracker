@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 import random
 from Midi.MidiController import MidiController
 
+person_location_unique_id = 1
+
 
 class Event:
     def __init__(self):
@@ -43,7 +45,10 @@ class Area:
 
 class PersonLocation:
     def __init__(self,id):
+        global person_location_unique_id
+        person_location_unique_id+=1
         self.id = id
+        self.UniquePersonId = person_location_unique_id
         self.observations = []
         self.last_location = 0
         self.LocationChanged = Event()
@@ -62,6 +67,7 @@ class PersonLocation:
             return True
         return False
     
+
     
 
     def IsInArea(self):

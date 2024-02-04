@@ -17,22 +17,53 @@ class SharedMemoryManager:
         except FileExistsError:
             pass  # If the pipe already exists, no need to create it again
 
-    def update_player(self, id, x, y):
-        self.player_data[id] = (x, y)
+    def update_player(self, tracker_id, unique_id, x, y):
+        self.player_data[tracker_id] = (x, y, unique_id)
         #self.write_to_shared_memory()
 
     def write_to_shared_memory(self):
         if( len(self.player_data) == 0):
             return
         serialized_data = b''
-        for pid, (px, py) in self.player_data.items():
-            serialized_data += struct.pack('iff', pid, px, py)
+        for pid, (px, py, unique_id) in self.player_data.items():
+            serialized_data += struct.pack('iiff', pid, unique_id, px, py)
 
-        self.write_to_pipe_non_blocking(self.pipe_name, serialized_data)
-
+        #self.write_to_pipe_non_blocking(self.pipe_name, serialized_data)
+        #self.testdeserialize(serialized_data)
         # # Write to named pipe
-        # with open(self.pipe_name, 'wb', buffering=0) as pipe:
-        #     pipe.write(serialized_data)
+        with open(self.pipe_name, 'wb', buffering=0) as pipe:
+            pipe.write(serialized_data)
+
+        self.player_data.clear()
+        
+
+
+    def testdeserialize(self, serialized_data):
+        # Calculate the size of each chunk (iiff = 4 bytes for int, 4 bytes for int, 4 bytes for float, 4 bytes for float)
+        chunk_size = struct.calcsize('iiff')
+
+        # Initialize an empty dictionary to hold deserialized player data
+        deserialized_player_data = {}
+
+        # Start index for slicing serialized_data
+        start = 0
+
+        # Loop until the entire serialized_data has been processed
+        while start < len(serialized_data):
+            # Extract a chunk of data
+            chunk = serialized_data[start:start+chunk_size]
+            
+            # Deserialize the chunk
+            pid, unique_id, px, py = struct.unpack('iiff', chunk)
+            
+            # Store the deserialized data using pid as the key
+            deserialized_player_data[pid] = (px, py, unique_id)
+            
+            # Move the start index to the next chunk
+            start += chunk_size
+
+        # At this point, deserialized_player_data contains all the player data deserialized
+        print(deserialized_player_data)        
 
     def write_to_pipe_non_blocking(self, pipe_name, data):
         mode = os.O_WRONLY | os.O_NONBLOCK
