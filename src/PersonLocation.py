@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 import random
 from Midi.MidiController import MidiController
+from NumberPool import NumberPool
+
 
 person_location_unique_id = 1
 
@@ -46,14 +48,19 @@ class Area:
 class PersonLocation:
     def __init__(self,id):
         global person_location_unique_id
+        global numberpool
         person_location_unique_id+=1
         self.id = id
         self.UniquePersonId = person_location_unique_id
+        self.PoolId = NumberPool.getInstance().getNextFree()
         self.observations = []
         self.last_location = 0
         self.LocationChanged = Event()
         self.last_update_time = datetime.now()
         self.color = self.generate_random_color()
+
+
+
         
 
     def update(self,person):
@@ -84,7 +91,8 @@ class PersonLocation:
         return time_difference > threshold
 
     def HasLeft(self):
-        if(self.last_update_is_older_than(1000) ==True or self.last_location == Area.NAreas+1):
+        #if(self.last_update_is_older_than(1000) ==True or self.last_location == Area.NAreas+1):
+        if(self.last_update_is_older_than(1000) ==True):# or self.last_location == Area.NAreas+1):
             old_last_location = self.last_location
             self.last_location = Area.NAreas+1
             self.last_update_time = datetime.now()

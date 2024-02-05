@@ -1,0 +1,21 @@
+import time
+import math
+from pythonosc.udp_client import SimpleUDPClient
+from OscClient import OscComm
+import random
+
+# OSC address for the opacity parameter
+#/composition/layers/1/video/opacity
+#/composition/selectedlayer/video/opacity
+osc_address = "/composition/layers/3/video/opacity"  # Adjust based on your setup
+osc = OscComm("127.0.0.1", 7000, fps=30)  # Adjust IP, port, and desired FPS
+osc.start_client()
+
+try:
+    # Add messages to be sent at the specified FPS
+    while(True):
+        osc.add_message("/composition/layers/3/video/opacity", random.random())
+        # Simulate other work or just wait
+        time.sleep(0.01)
+finally:
+    osc.stop_client()

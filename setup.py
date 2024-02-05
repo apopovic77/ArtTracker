@@ -23,7 +23,8 @@ setup(
         'supervision',
         'pafy',
         'lapx',
-        'pika'
+        'pika',
+        'python-osc'
     ],
     python_requires='>=3.10',
 )
