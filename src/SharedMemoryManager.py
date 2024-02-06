@@ -29,11 +29,11 @@ class SharedMemoryManager:
         for pid, (px, py, unique_id) in self.player_data.items():
             serialized_data += struct.pack('iiff', pid, unique_id, px, py)
 
-        #self.write_to_pipe_non_blocking(self.pipe_name, serialized_data)
-        #self.testdeserialize(serialized_data)
-        # # Write to named pipe
-        with open(self.pipe_name, 'wb', buffering=0) as pipe:
-            pipe.write(serialized_data)
+        self.write_to_pipe_non_blocking(self.pipe_name, serialized_data)
+        
+        # Write to named pipe
+        #with open(self.pipe_name, 'wb', buffering=0) as pipe:
+        #    pipe.write(serialized_data)
 
         self.player_data.clear()
         
@@ -77,8 +77,6 @@ class SharedMemoryManager:
                 print(f"Write operation on {pipe_name} would block.")
             else:
                 print(f"Opening named pipe failed: {e}")
-                if self.ask_for_permission_tocreatepipe() == True:
-                    self.write_to_pipe_non_blocking(self, pipe_name, data)
             return
 
         try:

@@ -16,4 +16,4 @@ OSC_FPS = 30
 NUMBERPOOLSIZE = 3
 
 WITH_SHARED_MEM = True
-SHARED_MEM_PIPENAME ='/tmp/shared_memory_pipe1'
+SHARED_MEM_PIPENAME ='/tmp/shared_memory_pipe'
