@@ -56,25 +56,20 @@ while cap.isOpened():
         fps_counter.update()
         if success:
 
-
             # Run YOLOv8 tracking on the frame, persisting tracks between frames
             results = model.track(frame, persist=True,classes=classes, verbose=False,conf=0.6)
-
-
-
-            if not (results and results[0].boxes):  # Check if there are any results and any boxe
-                continue
-
-            # Get the boxes and track IDs
-            boxes = results[0].boxes.xywh.cpu()
-            track_ids = results[0].boxes.id.int().cpu().tolist()
-
 
             # Visualize the results on the frame
             annotated_frame = results[0].plot()
 
-            #send messages
-            sender.send(boxes,track_ids, annotated_frame)
+            if  (results and results[0].boxes):  # Check if there are any results and any boxe
+                # Get the boxes and track IDs
+                boxes = results[0].boxes.xywh.cpu()
+                track_ids = results[0].boxes.id.int().cpu().tolist()
+                #send messages
+                sender.send(boxes,track_ids, annotated_frame)
+
+
 
 
 

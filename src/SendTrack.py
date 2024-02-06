@@ -89,7 +89,8 @@ class SendTrack:
             if(location_changed == True):
                 print("PERSON "+str(person.id)+" in Area "+Area.StateNames[person_location.last_location])
 
-            self.shm_manager.update_player(person.id, person_location.UniquePersonId, person_centerx / config.IMAGE_WIDTH, person_centery / config.IMAGE_HEIGHT)
+            if config.WITH_SHARED_MEM:
+                self.shm_manager.update_player(person.id, person_location.UniquePersonId, person_centerx / config.IMAGE_WIDTH, person_centery / config.IMAGE_HEIGHT)
 
 
             dbg_text += "PERSON TrackId:"+str(person.id)+" UniqueID:"+str(person_location.UniquePersonId) + " PoolId:"+str(person_location.PoolId)+" CENTER " + str(person_centerx) + " " + str(person_centery)+"\n\r"

@@ -2,10 +2,11 @@ import os
 import struct
 import errno
 import subprocess
+import config
 
 
 class SharedMemoryManager:
-    def __init__(self, max_players=10, pipe_name='/tmp/shared_memory_pipe'):
+    def __init__(self, max_players=10, pipe_name=config.SHARED_MEM_PIPENAME):
         self.player_size = 12  # 4 bytes for int ID, 4 bytes each for two floats
         self.buffer_size = max_players * self.player_size
         self.player_data = {}
