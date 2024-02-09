@@ -18,70 +18,86 @@ class SharedMemoryManager:
         except FileExistsError:
             pass  # If the pipe already exists, no need to create it again
 
-    def update_player(self, tracker_id, unique_id, x, y):
-        self.player_data[tracker_id] = (x, y, unique_id)
+    def update_player(self, tracker_id, unique_id, x, y, mask, triangle):
+        self.player_data[tracker_id] = (x, y, unique_id, mask, triangle)
         #self.write_to_shared_memory()
 
+    # def write_to_shared_memory(self):
+    #     if( len(self.player_data) == 0):
+    #         return
+    #     serialized_data = b''
+    #     for pid, (px, py, unique_id) in self.player_data.items():
+    #         serialized_data += struct.pack('iiff', pid, unique_id, px, py)
+
+    #     self.write_to_pipe_non_blocking(self.pipe_name, serialized_data)
+        
+    #     # Write to named pipe
+    #     #with open(self.pipe_name, 'wb', buffering=0) as pipe:
+    #     #    pipe.write(serialized_data)
+
+    #     self.player_data.clear()
+
+
+
+
     def write_to_shared_memory(self):
-        if( len(self.player_data) == 0):
+        # Check if there's data to write
+        if not self.player_data:
             return
+        
         serialized_data = b''
-        for pid, (px, py, unique_id) in self.player_data.items():
+        
+        # Serialize Player Data
+        # First, write the number of players
+        serialized_data += struct.pack('i', len(self.player_data))
+        
+        # Then, serialize each player's data
+        for pid, (px, py, unique_id, mask, triangle) in self.player_data.items():
             serialized_data += struct.pack('iiff', pid, unique_id, px, py)
 
+        serialized_data += struct.pack('i', len(self.player_data))
+        
+        # Then, serialize each mask
+        for pid, (px, py, unique_id,mask, triangles) in self.player_data.items():
+
+            # Number of points in the mask
+            serialized_data += struct.pack('i', len(mask))
+            # Points of the mask
+            for x, y in mask:
+                serialized_data += struct.pack('ff', x, y)
+
+            # Serialize the number of triangles
+            serialized_data += struct.pack('i', len(triangle))
+            # Serialize triangle indices
+            for triangle in triangles:
+                for vertex_index in triangle:
+                    serialized_data += struct.pack('i', vertex_index)
+
+        # Now, serialized_data contains both the player data and the masks
+        # Transfer the serialized data via your communication channel
         self.write_to_pipe_non_blocking(self.pipe_name, serialized_data)
-        
-        # Write to named pipe
-        #with open(self.pipe_name, 'wb', buffering=0) as pipe:
-        #    pipe.write(serialized_data)
-
         self.player_data.clear()
+
         
 
-
-    def testdeserialize(self, serialized_data):
-        # Calculate the size of each chunk (iiff = 4 bytes for int, 4 bytes for int, 4 bytes for float, 4 bytes for float)
-        chunk_size = struct.calcsize('iiff')
-
-        # Initialize an empty dictionary to hold deserialized player data
-        deserialized_player_data = {}
-
-        # Start index for slicing serialized_data
-        start = 0
-
-        # Loop until the entire serialized_data has been processed
-        while start < len(serialized_data):
-            # Extract a chunk of data
-            chunk = serialized_data[start:start+chunk_size]
-            
-            # Deserialize the chunk
-            pid, unique_id, px, py = struct.unpack('iiff', chunk)
-            
-            # Store the deserialized data using pid as the key
-            deserialized_player_data[pid] = (px, py, unique_id)
-            
-            # Move the start index to the next chunk
-            start += chunk_size
-
-        # At this point, deserialized_player_data contains all the player data deserialized
-        print(deserialized_player_data)        
 
     def write_to_pipe_non_blocking(self, pipe_name, data):
         mode = os.O_WRONLY | os.O_NONBLOCK
         try:
             pipe_fd = os.open(pipe_name, mode)
         except OSError as e:
-            if e.errno == errno.ENOENT:
-                print(f"Named pipe {pipe_name} does not exist.")
-            elif e.errno == errno.EWOULDBLOCK:
-                print(f"Write operation on {pipe_name} would block.")
-            else:
-                print(f"Opening named pipe failed: {e}")
+            if config.PRINT_DEBUG:
+                if e.errno == errno.ENOENT:
+                    print(f"Named pipe {pipe_name} does not exist.")
+                elif e.errno == errno.EWOULDBLOCK:
+                    print(f"Write operation on {pipe_name} would block.")
+                else:
+                    print(f"Opening named pipe failed: {e}")
             return
 
         try:
             bytes_written = os.write(pipe_fd, data)
-            print(f"Wrote {bytes_written} bytes to the pipe.")
+            #print(f"Wrote {bytes_written} bytes to the pipe.")
         except OSError as e:
             if e.errno == errno.EAGAIN or e.errno == errno.EWOULDBLOCK:
                 print("Writing to pipe would block, try again later.")
