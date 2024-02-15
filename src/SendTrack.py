@@ -30,7 +30,7 @@ dst = np.array([[ 163.,   89.],
                 [1468.,  826.],
                 [ 160.,  825.]], dtype=np.float32)
 warptransform = WarpTransform(src,dst)
-WithWarpTransform = True
+
 
 
 
@@ -61,18 +61,27 @@ class SendTrack:
 
         
 
-    def send(self,boxes, track_ids, masks, triangles, image):
+    def send(self,boxes, track_ids, masks, triangles, pose_center_points, image):
         dbg_text = ""
 
-        for box, track_id, mask, tria in zip(boxes, track_ids, masks, triangles):
+        for box, track_id, mask, tria, pose_center in zip(boxes, track_ids, masks, triangles, pose_center_points):
             x, y, w, h = box
 
 
             #send message via publish service zmq
-            person = self.create_person(box,track_id)
+            person = self.create_person(box,track_id, pose_center)
+
+
+
 
             person_centerx = (person.boundingbox.x + person.boundingbox.width/2) * config.IMAGE_WIDTH
             person_centery = (person.boundingbox.y + person.boundingbox.height/2) * config.IMAGE_HEIGHT
+
+            # if pose_center is not None:
+            #     person_centerx = pose_center[0] * config.IMAGE_WIDTH
+            #     person_centery = pose_center[1] * config.IMAGE_HEIGHT
+            
+                
             self.draw_prediction_circle(frame=image, pos=Point(person_centerx, person_centery))
   
 
@@ -195,7 +204,7 @@ class SendTrack:
         print(f"Location changed: person id {person_location.observations[-1].id} {new_location}")
 
     
-    def create_person(self,box,tracker_id):
+    def create_person(self,box,tracker_id, pose_center):
         x, y, w, h = box
 
         current_time = datetime.now()
@@ -205,8 +214,12 @@ class SendTrack:
         person_centerx = x
         person_centery = y
 
+        if(pose_center is not None):
+            person_centerx = pose_center[0]*self.webcam.width
+            person_centery = pose_center[1]*self.webcam.height
+
         #transform according to warp transform
-        if (warptransform.has_warp() and WithWarpTransform):
+        if (warptransform.has_warp() and config.WITH_WARP_TRANSFORM):
             (person_centerx,person_centery) = warptransform.transform_point((person_centerx, person_centery))
 
         tracked_person = TrackedPerson()
