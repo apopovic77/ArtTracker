@@ -90,22 +90,20 @@ class Tracker:
             if isinstance(kp_index, tuple):  # Wenn es sich um ein Paar von Keypoints handelt
                 kp_values = []
                 for index in kp_index:
-                    kp = keypoints[index]
-                    if kp[0] > 0 or kp[1] > 0:  # Prüfe, ob die Konfidenz des Keypoints positiv ist
-                        kp_values.append(kp[:2])  # Füge die X,Y-Koordinaten zur Liste hinzu
+                    if 0 <= index < len(keypoints):  # Ensure index is within the range for a list
+                        kp = keypoints[index]
+                        if kp[0] > 0 or kp[1] > 0:  # Prüfe, ob die Konfidenz des Keypoints positiv ist
+                            kp_values.append(kp[:2])  # Füge die X,Y-Koordinaten zur Liste hinzu
                 if kp_values:  # Wenn mindestens ein Keypoint des Paares erkannt wurde
                     # Berechne den Durchschnitt der X,Y-Koordinaten
                     central_point = np.mean(kp_values, axis=0)
                     return central_point
             else:  # Für einzelne Keypoints
-                kp = keypoints[kp_index]
-                if kp[0] > 0 or kp[1] > 0:  # Wenn die Konfidenz des Keypoints positiv ist
-                    return kp[:2]  # Gebe die X,Y-Koordinaten zurück
-
-        return None  # Wenn kein passender Keypoint gefunden wurde
-
-
-
+                if 0 <= kp_index < len(keypoints):  # Ensure index is within the range for a list
+                    kp = keypoints[kp_index]
+                    if kp[0] > 0 or kp[1] > 0:  # Wenn die Konfidenz des Keypoints positiv ist
+                        return kp[:2]  # Gebe die X,Y-Koordinaten zurück
+        return None  # Wenn kein passender Keypoint gefunden wurde      
         
 
     def SimplifyContourMasks(self,masks):
@@ -193,11 +191,16 @@ class Tracker:
                             results = model.track(frame, persist=True,classes=classes, verbose=False,conf=0.6)
 
                             central_points = []
-                            if(config.WITH_POSE):
+                            if(config.WITH_POSE and not config.WITH_SEGMENTATION):
                                 keypoints = results[0].keypoints.xyn.cpu().numpy()
                                 # Iteriere durch die Keypoints aller erkannten Personen
                                 for person_keypoints in keypoints:
+                                    #if len(person_keypoints) == 0: 
                                     central_points.append(self.find_central_point(person_keypoints))
+                                    #else:
+                                    #    central_points.append(None)
+
+                                
 
 
 
@@ -219,11 +222,14 @@ class Tracker:
 
                                     masks = self.SimplifyContourMasks(masks)
                                     triangles = self.triangulate_masks(masks)
+                                    central_points = [[] for _ in range(len(boxes))]
 
                                 else:
                                     # If there are no masks, initialize an empty list for each detected box
                                     masks = [[] for _ in range(len(boxes))]
                                     triangles = [[] for _ in range(len(boxes))]
+                                    if(len(central_points) == 0):
+                                        central_points = [[] for _ in range(len(boxes))]
 
                                 #send messages
                                 sender.send(boxes,track_ids,masks,triangles,central_points, annotated_frame)

@@ -214,7 +214,7 @@ class SendTrack:
         person_centerx = x
         person_centery = y
 
-        if(pose_center is not None):
+        if(pose_center is not None and len(pose_center) > 1):
             person_centerx = pose_center[0]*self.webcam.width
             person_centery = pose_center[1]*self.webcam.height
 
